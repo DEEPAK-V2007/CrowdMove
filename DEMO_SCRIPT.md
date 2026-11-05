@@ -1,108 +1,88 @@
-# CrowdMove — Demo Walkthrough (5 minutes)
+# TN-ITIS — Hackathon 5-Minute Presentation Script
 
-## Prerequisites
+## Pre-Demo Setup
 
-```bash
-# Terminal 1 — Backend
-cd backend
-rm -f crowdmove.db          # fresh DB
-./venv/bin/uvicorn main:app --port 8000
+### Option 1: Double-Click 1-Click Launcher (Easiest)
+Simply double-click:
+`c:\Users\acer\Downloads\SRM Hackthon\run.bat` (or `CrowdMove\run.bat`)
+This opens both the Backend and Frontend in separate windows automatically!
 
-# Terminal 2 — Frontend
-cd frontend
-npm run dev                  # opens on http://localhost:5173
+### Option 2: Manual Terminal Commands
+```powershell
+# Terminal 1 — Backend (FastAPI + ML Model + Auto-Simulation)
+cd "C:\Users\acer\Downloads\SRM Hackthon\CrowdMove\backend"
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+# Terminal 2 — Frontend (Vite + React)
+cd "C:\Users\acer\Downloads\SRM Hackthon\CrowdMove\frontend"
+npm.cmd run dev
 ```
 
----
-
-## Step 1 — Passenger View (1 min)
-
-1. Open `http://localhost:5173` in a browser
-2. Click **Passenger** quick-login button
-3. Show the **Smart Card** tab — card number, balance (₹500), QR code
-4. Tap **Live Buses** tab — buses are listed but idle (simulation not started yet)
-5. Tap a quick-recharge button (₹100) — balance updates, toast confirms
-6. Tap **History** — the recharge transaction appears
+Open `http://localhost:5173` in your browser. All 4 portals are accessible directly from the top universal navigation bar:
+- 🎫 **Passenger Portal:** `http://localhost:5173/passenger`
+- 📲 **Conductor Scanner:** `http://localhost:5173/scanner`
+- 🚦 **Driver HUD:** `http://localhost:5173/driver`
+- 🖥️ **Admin Command Center:** `http://localhost:5173/admin`
 
 ---
 
-## Step 2 — Conductor Scanner (30s)
+## ⏱️ Minute-by-Minute Pitch Script
 
-1. Open a **new tab** → `http://localhost:5173/scanner`
-2. Enter the passenger card number manually (e.g. `CM2024001`)
-3. Select any bus and tap **Board** → passenger count increments, fare deducted
-4. Switch back to the passenger tab — balance decreased, transaction logged
-
----
-
-## Step 3 — Driver View (30s)
-
-1. Open a new tab → login as **Driver** (quick-login)
-2. See the assigned bus, occupancy gauge at 0%, route info
-3. Note: once simulation starts, the gauge will move in real-time
+### Minute 0:00 - 0:45: The Problem & Solution Overview
+> "Judges, in Tamil Nadu and Chennai, MTC carries millions of commuters daily, but current operations are completely reactive. Buses bunch together, 15-20% of trips suffer extreme overcrowding, and conductors only know how many tickets were sold, not who is waiting at upcoming stops.
+> 
+> We built **TN-ITIS (Tamil Nadu Integrated Transit Intelligence System)**. Using real March 2026 ETM datasets, MTC shapefiles, and Chennai Metro networks from Theme 4, TN-ITIS predicts overcrowding 15-45 minutes ahead, monitors live occupancy, detects bunching, and automates operational responses."
 
 ---
 
-## Step 4 — Admin Dashboard + Start Simulation (1.5 min)
-
-1. Open a new tab → login as **Admin**
-2. **Overview** tab shows fleet stats (all zeros initially)
-3. Click **Start Simulation** in the control panel (top-right)
-4. Watch numbers animate: active buses, total passengers, overcrowded count
-5. Switch to **Map** tab — colored bus dots move along routes; metro/rail squares visible
-6. Switch to **Fleet** tab — bus table with live occupancy bars and crowd badges
-7. Switch to **Predictions** tab — overcrowding predictions and route heatmap appear
-8. Watch alerts panel fill with "approaching capacity" and "overcrowding" warnings
+### Minute 0:45 - 1:30: Smart Passenger Card & Conductor Scanner (Sections 2 & 3)
+1. **Passenger Tab**:
+   - Show the **Tamil Nadu Universal Smart Pass** (`TN-MTC-2026-0001`).
+   - Mention: *"Designed for high accessibility like a ration card — citizens without smartphones carry a physical NFC/RFID card; smartphone users have this digital pass with QR code."*
+2. **Conductor Scanner Tab (`/scanner`)**:
+   - Select active bus `TN01-N-159-01`.
+   - Click **"⚡ Priya (Pass 0001)"** (or scan camera QR).
+   - Show instant ₹10 fare deduction, real-time passenger count update, and live WebSocket sync.
 
 ---
 
-## Step 5 — Admin Dispatch (30s)
-
-1. Switch to **Dispatch** tab
-2. System recommendations appear (e.g. "Deploy extra bus on Route 18A")
-3. Click **Dispatch** on a recommendation — toast confirms, bus activated
-
----
-
-## Step 6 — Festival Mode (30s)
-
-1. Switch to **Festivals** tab
-2. Click **Activate** next to "Deepavali" — demand spikes to 2.0x
-3. Watch the overview stats surge, more overcrowding alerts fire
-4. View **Festival Impact** analysis — projected demand per route
-5. See normal-vs-festival comparison chart
+### Minute 1:30 - 2:30: Driver HUD & Operational Thresholds (Sections 3 & 10)
+1. **Driver HUD Tab**:
+   - Show the distraction-free driver screen.
+   - Point out the circular occupancy gauge, current passengers (seats vs total capacity), and upcoming stop boarding demand.
+   - Mention the safety design: *"The driver remains responsible for door operation — the system does not dangerously automate doors, but triggers a Web Audio beep and visual red warning when capacity hits 90%."*
 
 ---
 
-## Step 7 — Multimodal Alternatives (30s)
-
-1. Switch to the **Passenger** tab (or open a new one)
-2. Go to **Live Buses** — some buses now show orange/red badges
-3. For a crowded bus (orange or red), tap **Show nearby Metro/Rail**
-4. See alternatives: station name, line, distance, walk time
-5. Message: "TN01-18A-001 is full — take alternative transit nearby"
-6. Back on the admin **Map** — blue (M) squares = metro, green (S) = suburban rail
-
----
-
-## Key Talking Points
-
-- **Real-time simulation** — all data flows through WebSockets, updates every 5 seconds
-- **AI-powered predictions** — overcrowding predicted stops ahead, demand forecasting
-- **Festival intelligence** — system automatically recommends extra buses during events
-- **Multimodal integration** — suggests metro/suburban rail when buses are full
-- **QR ticketing** — digital smart card with fare deduction and transaction history
-- **Driver awareness** — live occupancy gauge with audio alert at capacity
-- **Command center** — admin sees everything: fleet, map, predictions, dispatch, alerts
+### Minute 2:30 - 3:30: Real Machine Learning Model & Live Predictions (Sections 4 & 5)
+1. **Admin Dashboard -> "AI/ML Model & Data" Tab**:
+   - Show the trained **RandomForestRegressor**:
+     - Trained on **480,000 sampled tickets from 31 daily files (68M records)** of March 2026 ETM data.
+     - **MAE = 9.12 passengers/stop** (meeting the target < 10 pax KPI).
+     - **Feature Importances**: Corridor (34%), Stop Stage (28%), Hour of Day (23%), Day of Week (12%).
+   - Show the **Interactive ML Sandbox**: Pick Route 159, 9:00 AM peak hour, click *"Run Inference"* to show predicted stop boarding demand in real time.
+2. **Admin Dashboard -> "Predictions" Tab**:
+   - Point out stop-level projected occupancy:
+     *"The model predicts Bus TN01-N-159-01 will reach full capacity at M.G.R. Koyambedu 3 stops before it arrives, giving operators enough time to act."*
 
 ---
 
-## Credentials
+### Minute 3:30 - 4:15: Bus Bunching Detection & Proactive Dispatch (Sections 6 & 11)
+1. **Admin Dashboard -> "Dispatch & Bunching" Tab**:
+   - Show the system recommendation: *"Hold lead bus at Stop 3 for 3 minutes to restore 8-minute headway interval."*
+   - Show the dispatch recommendation: *"Deploy additional standby bus on Route 159."*
+   - Click **"Dispatch Bus"** -> standby bus from depot is immediately activated and appears on the live OpenStreetMap!
+2. **Configure Capacity**:
+   - Switch to **"Fleet & Capacity"** tab -> click *"Config"* on any bus to demonstrate configuring total & seated capacity on the fly.
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | admin@crowdmove.in | test123 |
-| Driver | rajesh@crowdmove.in | test123 |
-| Passenger | priya@gmail.com | test123 |
+---
 
-All accounts use password: `test123`
+### Minute 4:15 - 5:00: Festival Surge & Multimodal Coordination (Sections 7 & 8)
+1. **Admin Dashboard -> "Festivals" Tab**:
+   - Activate **"Pongal Festival"** (2.5x multiplier).
+   - Watch the surge comparison chart show +150% demand on CMBT Koyambedu & Kilambakkam corridors.
+2. **Passenger App -> "Live Buses" Tab**:
+   - For a full or orange bus, click **"Show nearby Metro/Rail"**.
+   - App displays nearest Chennai Metro Green/Blue line stations with walking distance and estimated journey time.
+3. **Closing Statement**:
+   > "By unifying real ETM ticketing logs, machine learning, smart cards, and multimodal transport, TN-ITIS moves public transit from reactive firefighting to predictive intelligence. Thank you!"

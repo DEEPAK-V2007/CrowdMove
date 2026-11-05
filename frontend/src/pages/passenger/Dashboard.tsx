@@ -1,11 +1,19 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../context/AuthContext';
-import { busApi, passengerApi, multimodalApi, type Bus, type SmartCard, type Transaction, type BusAlternatives } from '../../api';
+import {
+  busApi, passengerApi, multimodalApi,
+  type Bus, type SmartCard, type Transaction, type BusAlternatives
+} from '../../api';
 import { useSimulation } from '../../hooks/useSimulation';
 import CrowdBadge from '../../components/CrowdBadge';
 import { showToast } from '../../components/Toast';
-import { CreditCard, History, LogOut, MapPin, Plus, RefreshCw, Train, Footprints, Wallet } from 'lucide-react';
+import RoleNavbar from '../../components/RoleNavbar';
+import {
+  CreditCard, History, LogOut, Plus, RefreshCw, Train, Footprints, Wallet,
+  ScanLine, Camera, Zap, Bus as BusIcon, CheckCircle2, ArrowRight, Copy
+} from 'lucide-react';
 
 export default function PassengerDashboard() {
   const { user, logout } = useAuth();
@@ -20,98 +28,170 @@ export default function PassengerDashboard() {
   const [alternatives, setAlternatives] = useState<Record<number, BusAlternatives>>({});
   const [loadingAlts, setLoadingAlts] = useState<number | null>(null);
 
+  // Quick Instant Boarding / Alighting states
+  const [selectedBusId, setSelectedBusId] = useState<number | null>(null);
+  const [isBoarded, setIsBoarded] = useState(false);
+  const [currentBoardedBusNumber, setCurrentBoardedBusNumber] = useState<string>('');
+  const [tapping, setTapping] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     loadCard();
-    busApi.list(true).then(r => setBuses(r.data));
+    busApi.list(true).then((r) => {
+      setBuses(r.data);
+      if (r.data.length > 0 && selectedBusId === null) {
+        setSelectedBusId(r.data[0].id);
+      }
+    });
   }, [user]);
 
   const loadCard = () => {
     if (!user) return;
-    passengerApi.getCard(user.id).then(r => {
+    passengerApi.getCard(user.id).then((r) => {
       setCard(r.data);
-      passengerApi.getTransactions(r.data.id).then(t => setTransactions(t.data));
-    });
+      passengerApi.getTransactions(r.data.id).then((t) => setTransactions(t.data));
+    }).catch(() => {});
   };
 
   useEffect(() => {
-    if (wsBuses.length > 0) setBuses(wsBuses.filter(b => b.is_active));
+    if (wsBuses.length > 0) {
+      const active = wsBuses.filter((b) => b.is_active);
+      setBuses(active);
+      if (selectedBusId === null && active.length > 0) {
+        setSelectedBusId(active[0].id);
+      }
+    }
   }, [wsBuses]);
 
   const refresh = () => {
     loadCard();
-    busApi.list(true).then(r => setBuses(r.data));
-    showToast('info', 'Refreshed');
+    busApi.list(true).then((r) => setBuses(r.data));
+    showToast('info', 'Refreshed live data');
   };
 
   const handleRecharge = async () => {
     if (!card || !rechargeAmt) return;
     const amt = parseFloat(rechargeAmt);
     if (isNaN(amt) || amt <= 0 || amt > 5000) {
-      setRechargeMsg({ ok: false, text: 'Enter an amount between 1 and 5000' });
+      setRechargeMsg({ ok: false, text: 'Enter an amount between ₹1 and ₹5,000' });
       return;
     }
     setRecharging(true);
     setRechargeMsg(null);
     try {
       const res = await passengerApi.recharge(card.card_number, amt);
-      setCard(prev => prev ? { ...prev, balance: res.data.new_balance } : null);
+      setCard((prev) => (prev ? { ...prev, balance: res.data.new_balance } : null));
       setRechargeMsg({ ok: true, text: `Recharged ₹${amt.toFixed(2)} successfully` });
       setRechargeAmt('');
-      showToast('success', `₹${amt.toFixed(2)} added to your card`);
+      showToast('success', `₹${amt.toFixed(2)} added to your transit card`);
       loadCard();
     } catch {
       setRechargeMsg({ ok: false, text: 'Recharge failed' });
-      showToast('error', 'Recharge failed');
+      showToast('error', 'Recharge transaction failed');
     } finally {
       setRecharging(false);
     }
   };
 
+  const handleInstantTap = async (actionType: 'board' | 'alight', specificBusId?: number) => {
+    if (!card) return;
+    const busId = specificBusId || selectedBusId;
+    if (!busId) {
+      showToast('error', 'Please select an active bus');
+      return;
+    }
+
+    const busObj = buses.find((b) => b.id === busId);
+    setTapping(true);
+    try {
+      const res = await passengerApi.scan(card.card_number, busId, actionType);
+      if (res.data.success) {
+        showToast('success', res.data.message);
+        if (actionType === 'board') {
+          setIsBoarded(true);
+          setCurrentBoardedBusNumber(busObj?.bus_number || 'Bus');
+        } else {
+          setIsBoarded(false);
+          setCurrentBoardedBusNumber('');
+        }
+        loadCard();
+        busApi.list(true).then((r) => setBuses(r.data));
+      } else {
+        showToast('error', res.data.message);
+      }
+    } catch {
+      showToast('error', 'Validation request failed');
+    } finally {
+      setTapping(false);
+    }
+  };
+
   const fetchAlternatives = async (busId: number) => {
     if (alternatives[busId]) {
-      setAlternatives(prev => { const copy = { ...prev }; delete copy[busId]; return copy; });
+      setAlternatives((prev) => {
+        const copy = { ...prev };
+        delete copy[busId];
+        return copy;
+      });
       return;
     }
     setLoadingAlts(busId);
     try {
       const res = await multimodalApi.forBus(busId);
-      setAlternatives(prev => ({ ...prev, [busId]: res.data }));
-    } catch { /* ignore */ }
+      setAlternatives((prev) => ({ ...prev, [busId]: res.data }));
+    } catch {
+      // ignore
+    }
     setLoadingAlts(null);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <RoleNavbar />
+
+      {/* Main Header */}
+      <header className="bg-gradient-to-r from-blue-900 to-indigo-950 border-b border-slate-800 sticky top-0 z-10 shadow-md">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-gray-900">CrowdMove</h1>
-            <p className="text-xs text-gray-500">Welcome, {user?.name}</p>
+            <h1 className="text-lg font-bold text-white flex items-center gap-1.5">
+              <BusIcon className="w-5 h-5 text-emerald-400" /> TN-ITIS Passenger Pass
+            </h1>
+            <p className="text-xs text-blue-200">Commuter: {user?.name}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={refresh} className="p-2 text-gray-500 hover:text-blue-600 transition-colors">
-              <RefreshCw className="w-5 h-5" />
+            <button
+              onClick={refresh}
+              title="Refresh"
+              className="p-2 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
             </button>
-            <button onClick={logout} className="p-2 text-gray-500 hover:text-red-600 transition-colors">
-              <LogOut className="w-5 h-5" />
+            <button
+              onClick={logout}
+              title="Logout"
+              className="p-2 text-slate-300 hover:text-red-400 bg-slate-800/80 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-4">
-        <div className="flex gap-2 mb-4">
+      <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
+        {/* Navigation Tabs */}
+        <div className="flex gap-2">
           {[
-            { key: 'card' as const, label: 'Smart Card', icon: CreditCard },
-            { key: 'buses' as const, label: 'Live Buses', icon: RefreshCw },
-            { key: 'history' as const, label: 'History', icon: History },
-          ].map(t => (
+            { key: 'card' as const, label: 'My Smart Pass', icon: CreditCard },
+            { key: 'buses' as const, label: 'Live Bus Crowd', icon: RefreshCw },
+            { key: 'history' as const, label: 'Travel History', icon: History },
+          ].map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 transition-all ${
-                tab === t.key ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border hover:bg-gray-50'
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                tab === t.key
+                  ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/50'
+                  : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
               }`}
             >
               <t.icon className="w-4 h-4" />
@@ -120,35 +200,139 @@ export default function PassengerDashboard() {
           ))}
         </div>
 
+        {/* TAB 1: SMART CARD & VALIDATION */}
         {tab === 'card' && card && (
           <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
-            {/* Smart Card */}
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 text-white shadow-lg">
-              <div className="flex justify-between items-start mb-8">
+            {/* Government Smart Card Design */}
+            <div className="bg-gradient-to-br from-indigo-900 via-blue-900 to-emerald-950 rounded-2xl p-6 text-white shadow-xl border border-white/20 relative overflow-hidden">
+              <div className="absolute -right-8 -bottom-8 w-36 h-36 bg-white/5 rounded-full pointer-events-none" />
+              <div className="flex justify-between items-start mb-6">
                 <div>
-                  <p className="text-blue-200 text-xs uppercase tracking-wider">CrowdMove Transit Card</p>
-                  <p className="text-lg font-bold mt-1">{card.passenger.name}</p>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <p className="text-emerald-300 text-[10px] font-bold uppercase tracking-wider">Govt. of Tamil Nadu · தமிழ்நாடு அரசு</p>
+                  </div>
+                  <p className="text-base font-bold text-white">MTC Universal Smart Transit Pass</p>
+                  <p className="text-xs text-blue-200 mt-0.5">{card.passenger.name}</p>
                 </div>
-                <div className="bg-white/20 rounded-lg px-3 py-1 text-sm">
-                  {card.is_active ? 'Active' : 'Inactive'}
+                <div className="bg-emerald-500/30 border border-emerald-400/40 rounded-lg px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                  {card.is_active ? 'Active Pass' : 'Inactive'}
                 </div>
               </div>
-              <p className="text-2xl font-mono tracking-widest mb-6">{card.card_number}</p>
-              <div className="flex justify-between items-end">
+
+              <p className="text-xl font-mono tracking-widest mb-6 font-bold">{card.card_number}</p>
+
+              <div className="flex justify-between items-end border-t border-white/10 pt-3">
                 <div>
-                  <p className="text-blue-200 text-xs">Balance</p>
-                  <p className="text-3xl font-bold">{'₹'}{card.balance.toFixed(2)}</p>
+                  <p className="text-blue-200 text-xs">Prepaid Wallet Balance</p>
+                  <p className="text-3xl font-bold">₹{card.balance.toFixed(2)}</p>
                 </div>
-                <div className="text-right text-sm text-blue-200">
-                  ID: {card.passenger.id}
+                <div className="text-right text-xs text-blue-200">
+                  <p>MTC Bus + Metro Feeder</p>
+                  <p className="text-[10px] text-emerald-300">Depot Rechargeable</p>
                 </div>
               </div>
             </div>
 
-            {/* QR Code */}
-            <div className="bg-white rounded-xl p-6 border text-center">
-              <p className="text-sm text-gray-500 mb-4">Show this QR to the conductor</p>
-              <div className="inline-block bg-white p-4 rounded-xl shadow-sm border">
+            {/* Accessibility Notice */}
+            <div className="bg-blue-950/60 border border-blue-800/80 rounded-xl p-3 text-xs text-blue-200 leading-relaxed">
+              <span className="font-semibold text-white">Government Pass Accessibility: </span>
+              In real deployment, this functions as a physical NFC/RFID card for passengers without smartphones. Smart phone users can present this digital QR or tap directly.
+            </div>
+
+            {/* WHERE & HOW TO SCAN: Interactive Scanner Action Box */}
+            <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <ScanLine className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-sm text-white">How & Where to Scan This Pass</h3>
+              </div>
+              <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                Choose either method below to board a bus and validate your fare:
+              </p>
+
+              <div className="space-y-3">
+                {/* METHOD 1: 1-Click Instant Tap Boarding Simulation */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-emerald-400" /> Method 1: Instant Tap In/Out (Demo)
+                    </span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-3">
+                    Select a bus below to board instantly with ₹10 fare deduction:
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={selectedBusId ?? ''}
+                      onChange={(e) => setSelectedBusId(Number(e.target.value))}
+                      className="flex-1 bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 font-semibold focus:ring-2 focus:ring-blue-500"
+                    >
+                      {buses.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.bus_number} ({b.current_passengers}/{b.total_capacity} pax)
+                        </option>
+                      ))}
+                    </select>
+
+                    {isBoarded ? (
+                      <button
+                        type="button"
+                        onClick={() => handleInstantTap('alight')}
+                        disabled={tapping}
+                        className="py-2.5 px-4 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
+                      >
+                        <LogOut className="w-4 h-4" /> Tap Out (Alight)
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleInstantTap('board')}
+                        disabled={tapping}
+                        className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 shrink-0 shadow-md"
+                      >
+                        <Zap className="w-4 h-4" /> Tap In (Board Bus)
+                      </button>
+                    )}
+                  </div>
+
+                  {isBoarded && (
+                    <div className="mt-2.5 p-2 bg-emerald-950/80 border border-emerald-500/50 rounded-lg text-xs text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Currently traveling on <strong>{currentBoardedBusNumber}</strong></span>
+                    </div>
+                  )}
+                </div>
+
+                {/* METHOD 2: Open Camera Scanner */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-blue-300 flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-blue-400" /> Method 2: Conductor Camera App
+                    </span>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Open conductor camera to scan the QR code below using device camera.
+                    </p>
+                  </div>
+                  <Link
+                    to={`/scanner?card=${card.card_number}`}
+                    className="py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors shadow-md"
+                  >
+                    Open Scanner <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code Presentation */}
+            <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 text-center">
+              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
+                Digital Pass QR Code
+              </p>
+              <div className="inline-block bg-white p-4 rounded-xl shadow-lg border border-slate-300">
                 <QRCodeSVG
                   value={card.card_number}
                   size={180}
@@ -156,27 +340,41 @@ export default function PassengerDashboard() {
                   includeMargin={false}
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-3 font-mono">{card.card_number}</p>
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <span className="text-xs text-white font-mono font-bold tracking-wider">{card.card_number}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(card.card_number);
+                    showToast('success', 'Pass ID copied to clipboard');
+                  }}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-semibold border border-slate-700 flex items-center gap-1 transition-colors"
+                >
+                  <Copy className="w-3 h-3" /> Copy
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Conductor scans this QR with their device camera</p>
             </div>
 
-            {/* Recharge */}
-            <div className="bg-white rounded-xl p-4 border">
+            {/* Wallet Recharge Simulation */}
+            <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800">
               <div className="flex items-center gap-2 mb-3">
-                <Wallet className="w-4 h-4 text-blue-600" />
-                <p className="text-sm font-semibold text-gray-900">Recharge Card</p>
+                <Wallet className="w-4 h-4 text-blue-400" />
+                <p className="text-xs font-bold text-slate-200 uppercase tracking-wider">Prepaid Transit Recharge</p>
               </div>
-              <div className="flex gap-2 mb-2">
-                {[100, 200, 500].map(amt => (
+              <div className="flex gap-2 mb-3">
+                {[100, 200, 500].map((amt) => (
                   <button
                     key={amt}
+                    type="button"
                     onClick={() => setRechargeAmt(String(amt))}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
                       rechargeAmt === String(amt)
-                        ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        ? 'bg-blue-600 border-blue-500 text-white'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
                     }`}
                   >
-                    {'₹'}{amt}
+                    +₹{amt}
                   </button>
                 ))}
               </div>
@@ -184,20 +382,21 @@ export default function PassengerDashboard() {
                 <input
                   type="number"
                   value={rechargeAmt}
-                  onChange={e => setRechargeAmt(e.target.value)}
-                  placeholder="Custom amount"
-                  className="flex-1 px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setRechargeAmt(e.target.value)}
+                  placeholder="Custom amount (₹)"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
+                  type="button"
                   onClick={handleRecharge}
                   disabled={!rechargeAmt || recharging}
-                  className="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  <Plus className="w-4 h-4" /> {recharging ? '...' : 'Recharge'}
+                  <Plus className="w-3.5 h-3.5" /> {recharging ? '...' : 'Recharge'}
                 </button>
               </div>
               {rechargeMsg && (
-                <p className={`text-sm mt-2 ${rechargeMsg.ok ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`text-xs mt-2 font-medium ${rechargeMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>
                   {rechargeMsg.text}
                 </p>
               )}
@@ -205,115 +404,154 @@ export default function PassengerDashboard() {
           </div>
         )}
 
+        {/* Fallback when card is not yet loaded */}
+        {tab === 'card' && !card && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3 animate-[fadeIn_0.3s_ease-out]">
+            <CreditCard className="w-12 h-12 text-blue-400 mx-auto" />
+            <h3 className="text-base font-bold text-white">Smart Pass Verification</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Connecting to Tamil Nadu State Transit Registry... Click below to retrieve or issue your Smart Pass.
+            </p>
+            <button
+              onClick={loadCard}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg"
+            >
+              Issue / Retrieve My Pass
+            </button>
+          </div>
+        )}
+
+        {/* TAB 2: LIVE BUS CROWD TRACKER & MULTIMODAL */}
         {tab === 'buses' && (
-          <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
-            {buses.map(bus => {
+          <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+            {/* Crowd Level Legend */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs">
+              <p className="font-bold text-slate-300 mb-2">Live Crowd Status Guide:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                <div className="flex items-center gap-1.5 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Low (&lt;50%)</div>
+                <div className="flex items-center gap-1.5 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500" /> Moderate (50-74%)</div>
+                <div className="flex items-center gap-1.5 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" /> High (75-89%)</div>
+                <div className="flex items-center gap-1.5 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Critical (90%+)</div>
+              </div>
+            </div>
+
+            {/* Bus Cards List */}
+            {buses.map((bus) => {
               const isFull = bus.crowd_status === 'red' || bus.crowd_status === 'orange';
               const alt = alternatives[bus.id];
               return (
-                <div key={bus.id} className="bg-white rounded-xl border overflow-hidden transition-all">
-                  <div className={`p-4 flex items-center justify-between ${
-                    bus.crowd_status === 'red' ? 'ring-2 ring-red-300 rounded-xl' : ''
-                  }`}>
-                    <div>
-                      <p className="font-semibold text-gray-900">{bus.bus_number}</p>
-                      <p className="text-sm text-gray-500">
-                        {bus.current_passengers}/{bus.total_capacity} passengers
-                      </p>
-                      <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-1.5">
-                        <div
-                          className={`h-1.5 rounded-full transition-all duration-700 ${
-                            bus.crowd_status === 'red' ? 'bg-red-500' :
-                            bus.crowd_status === 'orange' ? 'bg-orange-500' :
-                            bus.crowd_status === 'yellow' ? 'bg-yellow-500' : 'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min(bus.occupancy_percent, 100)}%` }}
-                        />
+                <div
+                  key={bus.id}
+                  className={`bg-slate-900 rounded-xl border transition-all ${
+                    bus.crowd_status === 'red'
+                      ? 'border-red-600/60 ring-1 ring-red-500/40'
+                      : 'border-slate-800'
+                  }`}
+                >
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="font-bold text-white text-sm">{bus.bus_number}</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {bus.current_passengers} / {bus.total_capacity} passengers ({bus.occupancy_percent}%)
+                        </p>
+                      </div>
+                      <CrowdBadge status={bus.crowd_status} />
+                    </div>
+
+                    <div className="w-full bg-slate-800 rounded-full h-2 mb-3">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-700 ${
+                          bus.crowd_status === 'red' ? 'bg-red-500' :
+                          bus.crowd_status === 'orange' ? 'bg-orange-500' :
+                          bus.crowd_status === 'yellow' ? 'bg-yellow-500' : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${Math.min(bus.occupancy_percent, 100)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+                      <span className="text-slate-400">
+                        Available Seats: <strong className="text-white">{Math.max(0, bus.seated_capacity - bus.current_passengers)}</strong>
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        {isFull && (
+                          <button
+                            type="button"
+                            onClick={() => fetchAlternatives(bus.id)}
+                            className="px-2.5 py-1 bg-purple-900/40 hover:bg-purple-900/70 border border-purple-500/40 text-purple-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                          >
+                            <Train className="w-3.5 h-3.5" /> {loadingAlts === bus.id ? 'Loading...' : 'Metro Alts'}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleInstantTap('board', bus.id)}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
+                        >
+                          <Zap className="w-3.5 h-3.5" /> Board
+                        </button>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-1">
-                      <CrowdBadge status={bus.crowd_status} />
-                      <span className="text-xs text-gray-400">{bus.occupancy_percent}%</span>
-                    </div>
-                  </div>
 
-                  {/* Show alternatives button for crowded buses */}
-                  {isFull && (
-                    <div className="border-t">
-                      <button
-                        onClick={() => fetchAlternatives(bus.id)}
-                        disabled={loadingAlts === bus.id}
-                        className="w-full px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <Train className="w-4 h-4" />
-                        {loadingAlts === bus.id ? 'Finding alternatives...' :
-                         alt ? 'Hide alternatives' : 'Show nearby Metro/Rail'}
-                      </button>
-
-                      {alt && alt.alternatives.length > 0 && (
-                        <div className="px-4 pb-3 space-y-2 animate-[fadeIn_0.2s_ease-out]">
-                          <p className="text-xs text-orange-600 font-medium">{alt.suggestion}</p>
-                          {alt.alternatives.map(station => (
-                            <div key={station.id} className="flex items-center gap-3 bg-blue-50 rounded-lg p-3">
-                              <div className={`p-1.5 rounded-lg ${
-                                station.station_type === 'metro' ? 'bg-blue-100' : 'bg-green-100'
-                              }`}>
-                                <Train className={`w-4 h-4 ${
-                                  station.station_type === 'metro' ? 'text-blue-600' : 'text-green-600'
-                                }`} />
+                    {/* Multimodal Alternative Suggestion Box */}
+                    {alt && (
+                      <div className="mt-3 p-3 bg-purple-950/40 border border-purple-800/60 rounded-xl space-y-2 animate-[fadeIn_0.2s_ease-out]">
+                        <p className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                          <Train className="w-4 h-4 text-purple-400" /> {alt.suggestion}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Bus is crowded. Suggested Chennai Metro & Suburban rail alternatives:
+                        </p>
+                        <div className="space-y-1.5">
+                          {alt.alternatives.map((st) => (
+                            <div
+                              key={st.id}
+                              className="bg-slate-900/80 p-2 rounded-lg border border-purple-900/40 flex items-center justify-between text-xs"
+                            >
+                              <div>
+                                <p className="font-semibold text-white">{st.name}</p>
+                                <p className="text-[10px] text-purple-300 font-mono">{st.line} · {st.station_type.toUpperCase()}</p>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900">{station.name}</p>
-                                <p className="text-xs text-gray-500">{station.line}</p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <Footprints className="w-3 h-3" />
-                                  {station.distance_km} km
-                                </div>
-                                <p className="text-xs font-medium text-blue-600">
-                                  ~{station.walk_minutes} min walk
-                                </p>
+                              <div className="text-right text-[11px] text-slate-300 flex items-center gap-1">
+                                <Footprints className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>{st.distance_km} km ({st.walk_minutes} min walk)</span>
                               </div>
                             </div>
                           ))}
                         </div>
-                      )}
-
-                      {alt && alt.alternatives.length === 0 && (
-                        <div className="px-4 pb-3">
-                          <p className="text-xs text-gray-400 text-center">No nearby metro/rail stations found</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
-            {buses.length === 0 && (
-              <div className="text-center py-12">
-                <div className="animate-spin w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-3" />
-                <p className="text-gray-400">Loading buses...</p>
-              </div>
-            )}
           </div>
         )}
 
+        {/* TAB 3: TRANSACTION HISTORY */}
         {tab === 'history' && (
-          <div className="space-y-2 animate-[fadeIn_0.3s_ease-out]">
-            {transactions.map(txn => (
-              <div key={txn.id} className="bg-white rounded-xl p-4 border flex items-center justify-between transition-all hover:shadow-sm">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{txn.description}</p>
-                  <p className="text-xs text-gray-400">{new Date(txn.created_at).toLocaleString()}</p>
-                </div>
-                <p className={`font-semibold ${txn.type === 'debit' ? 'text-red-600' : 'text-green-600'}`}>
-                  {txn.type === 'debit' ? '-' : '+'}{'₹'}{txn.amount.toFixed(2)}
-                </p>
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 space-y-3 animate-[fadeIn_0.3s_ease-out]">
+            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-300 mb-2">
+              Recent Travel & Recharge Logs
+            </h3>
+            {transactions.length === 0 ? (
+              <p className="text-center text-xs text-slate-500 py-6">No transaction history yet.</p>
+            ) : (
+              <div className="divide-y divide-slate-800">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="py-2.5 flex items-center justify-between text-xs">
+                    <div>
+                      <p className="font-semibold text-white">{tx.description || (tx.type === 'debit' ? 'MTC Bus Fare' : 'Recharge')}</p>
+                      <p className="text-[10px] text-slate-500">{new Date(tx.created_at).toLocaleString()}</p>
+                    </div>
+                    <span className={`font-mono font-bold ${tx.type === 'debit' ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {tx.type === 'debit' ? `-₹${tx.amount.toFixed(2)}` : `+₹${tx.amount.toFixed(2)}`}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-            {transactions.length === 0 && (
-              <p className="text-center text-gray-400 py-8">No transactions yet</p>
             )}
           </div>
         )}

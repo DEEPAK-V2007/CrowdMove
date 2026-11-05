@@ -46,3 +46,9 @@ def get_festival_impact(festival_id: int, db: Session = Depends(get_db)):
 @router.get("/festival-comparison")
 def get_festival_comparison(db: Session = Depends(get_db)):
     return prediction_engine.normal_vs_festival_comparison(db)
+
+
+@router.get("/model-metrics")
+def get_model_metrics():
+    """Returns Machine Learning model training metadata, evaluation metrics, and feature importances."""
+    return prediction_engine.get_model_metrics()

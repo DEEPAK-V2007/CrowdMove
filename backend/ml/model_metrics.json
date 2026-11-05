@@ -1,0 +1,211 @@
+{
+  "dataset": {
+    "source": "Tamil Nadu MTC Electronic Ticketing Machine (ETM) Logs",
+    "period": "March 2026 (31 Days, 68M Monthly Records)",
+    "training_samples_evaluated": 480000,
+    "aggregated_feature_rows": 22521,
+    "corridors_analyzed": 24,
+    "routes": [
+      "101",
+      "102P",
+      "114",
+      "121C",
+      "159",
+      "159A",
+      "15F",
+      "17D",
+      "18A",
+      "1C",
+      "21G",
+      "48C",
+      "51X",
+      "570",
+      "57M",
+      "583",
+      "61K",
+      "62",
+      "66",
+      "70C",
+      "70V",
+      "91",
+      "95X",
+      "M70"
+    ]
+  },
+  "model_architecture": {
+    "selected_algorithm": "RandomForestRegressor",
+    "algorithms_compared": [
+      "RandomForestRegressor",
+      "GradientBoostingRegressor"
+    ],
+    "features_used": [
+      "route_encoded",
+      "hour",
+      "day_of_week",
+      "from_stage",
+      "is_weekend",
+      "is_peak_hour"
+    ],
+    "target_variable": "total_passengers (Stop-level / Stage Passenger Demand)"
+  },
+  "evaluation_metrics": {
+    "mae": 9.12,
+    "rmse": 14.84,
+    "r2_score": 0.3282,
+    "comparison": {
+      "RandomForest": {
+        "mae": 9.12,
+        "rmse": 14.84,
+        "r2": 0.3282
+      },
+      "GradientBoosting": {
+        "mae": 9.32,
+        "rmse": 15.12,
+        "r2": 0.3025
+      }
+    }
+  },
+  "feature_importances": {
+    "route_encoded": 0.3397,
+    "hour": 0.2282,
+    "day_of_week": 0.1217,
+    "from_stage": 0.2784,
+    "is_weekend": 0.0045,
+    "is_peak_hour": 0.0274
+  },
+  "route_baselines": {
+    "101": {
+      "avg_hourly_demand": 8.1,
+      "peak_hour_demand": 8.8,
+      "max_demand_recorded": 116
+    },
+    "102P": {
+      "avg_hourly_demand": 11.6,
+      "peak_hour_demand": 11.9,
+      "max_demand_recorded": 122
+    },
+    "114": {
+      "avg_hourly_demand": 21.9,
+      "peak_hour_demand": 22.4,
+      "max_demand_recorded": 194
+    },
+    "121C": {
+      "avg_hourly_demand": 15.9,
+      "peak_hour_demand": 17.4,
+      "max_demand_recorded": 93
+    },
+    "159": {
+      "avg_hourly_demand": 20.0,
+      "peak_hour_demand": 21.6,
+      "max_demand_recorded": 205
+    },
+    "159A": {
+      "avg_hourly_demand": 18.2,
+      "peak_hour_demand": 20.8,
+      "max_demand_recorded": 149
+    },
+    "15F": {
+      "avg_hourly_demand": 26.4,
+      "peak_hour_demand": 32.5,
+      "max_demand_recorded": 174
+    },
+    "17D": {
+      "avg_hourly_demand": 18.5,
+      "peak_hour_demand": 23.2,
+      "max_demand_recorded": 152
+    },
+    "18A": {
+      "avg_hourly_demand": 6.7,
+      "peak_hour_demand": 6.5,
+      "max_demand_recorded": 134
+    },
+    "1C": {
+      "avg_hourly_demand": 6.4,
+      "peak_hour_demand": 7.6,
+      "max_demand_recorded": 48
+    },
+    "21G": {
+      "avg_hourly_demand": 10.3,
+      "peak_hour_demand": 11.0,
+      "max_demand_recorded": 119
+    },
+    "48C": {
+      "avg_hourly_demand": 16.7,
+      "peak_hour_demand": 21.6,
+      "max_demand_recorded": 214
+    },
+    "51X": {
+      "avg_hourly_demand": 19.9,
+      "peak_hour_demand": 21.9,
+      "max_demand_recorded": 163
+    },
+    "570": {
+      "avg_hourly_demand": 9.6,
+      "peak_hour_demand": 11.1,
+      "max_demand_recorded": 203
+    },
+    "57M": {
+      "avg_hourly_demand": 14.2,
+      "peak_hour_demand": 17.8,
+      "max_demand_recorded": 119
+    },
+    "583": {
+      "avg_hourly_demand": 12.8,
+      "peak_hour_demand": 13.9,
+      "max_demand_recorded": 278
+    },
+    "61K": {
+      "avg_hourly_demand": 17.7,
+      "peak_hour_demand": 19.0,
+      "max_demand_recorded": 141
+    },
+    "62": {
+      "avg_hourly_demand": 15.8,
+      "peak_hour_demand": 16.8,
+      "max_demand_recorded": 162
+    },
+    "66": {
+      "avg_hourly_demand": 19.1,
+      "peak_hour_demand": 20.5,
+      "max_demand_recorded": 174
+    },
+    "70C": {
+      "avg_hourly_demand": 20.4,
+      "peak_hour_demand": 23.0,
+      "max_demand_recorded": 119
+    },
+    "70V": {
+      "avg_hourly_demand": 17.3,
+      "peak_hour_demand": 17.9,
+      "max_demand_recorded": 376
+    },
+    "91": {
+      "avg_hourly_demand": 10.8,
+      "peak_hour_demand": 11.2,
+      "max_demand_recorded": 259
+    },
+    "95X": {
+      "avg_hourly_demand": 9.0,
+      "peak_hour_demand": 8.7,
+      "max_demand_recorded": 169
+    },
+    "M70": {
+      "avg_hourly_demand": 7.8,
+      "peak_hour_demand": 8.7,
+      "max_demand_recorded": 72
+    }
+  },
+  "operational_thresholds": {
+    "green_low": "< 50% capacity",
+    "yellow_moderate": "50% - 74% capacity",
+    "orange_high": "75% - 89% capacity",
+    "red_critical": ">= 90% capacity (Triggers driver beep & admin alert)",
+    "bus_bunching_cov": "> 0.5 headway CoV or headway < 3 mins"
+  },
+  "limitations": [
+    "ETM tickets record boardings upon issuance; alighting is inferred through destination stages and probabilistic alighting kernels.",
+    "Special unannounced local strikes or sudden heavy rains require manual supervisor override via Admin Dispatch.",
+    "NCMC open loop smart cards will supplement physical cash ticket records as digital smart cards scale up."
+  ],
+  "trained_at": "2026-11-06 03:37:58"
+}

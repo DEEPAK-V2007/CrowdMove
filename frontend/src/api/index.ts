@@ -109,6 +109,8 @@ export interface Recommendation {
   detail: string;
   can_dispatch: boolean;
   depot_bus_id: number | null;
+  hold_bus_id?: number | null;
+  bus_number?: string;
 }
 
 export interface OvercrowdingPrediction {
@@ -238,6 +240,10 @@ export const busApi = {
     api.get<Bus[]>(`/buses/route/${routeId}`),
   byDriver: (driverId: number) =>
     api.get<Bus>(`/buses/driver/${driverId}`),
+  updateCapacity: (busId: number, totalCapacity: number, seatedCapacity?: number) =>
+    api.patch<{ success: boolean; bus_number: string; total_capacity: number; occupancy_percent: number; crowd_status: string }>(
+      `/buses/${busId}/capacity`, { total_capacity: totalCapacity, seated_capacity: seatedCapacity }
+    ),
 };
 
 export const passengerApi = {
@@ -268,6 +274,8 @@ export const dashboardApi = {
     api.get<Recommendation[]>('/dashboard/recommendations'),
   dispatch: (busId: number) =>
     api.post<{ success: boolean; message: string; bus_number?: string }>(`/dashboard/dispatch/${busId}`),
+  holdBus: (busId: number) =>
+    api.post<{ success: boolean; message: string; bus_number?: string }>(`/dashboard/hold/${busId}`),
 };
 
 export const predictionsApi = {
@@ -283,6 +291,8 @@ export const predictionsApi = {
     api.get<FestivalImpact>(`/predictions/festival-impact/${festivalId}`),
   festivalComparison: () =>
     api.get<FestivalComparison[]>('/predictions/festival-comparison'),
+  modelMetrics: () =>
+    api.get<any>('/predictions/model-metrics'),
 };
 
 export const simulationApi = {

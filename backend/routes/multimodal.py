@@ -31,7 +31,7 @@ def list_stations(db: Session = Depends(get_db)):
 def nearby_stations(
     lat: float = Query(...),
     lng: float = Query(...),
-    radius_km: float = Query(2.0),
+    radius_km: float = Query(3.5),
     db: Session = Depends(get_db),
 ):
     stations = db.query(MetroStation).all()
@@ -43,7 +43,7 @@ def nearby_stations(
                 "id": s.id, "name": s.name, "station_type": s.station_type,
                 "line": s.line, "latitude": s.latitude, "longitude": s.longitude,
                 "distance_km": round(dist, 2),
-                "walk_minutes": round(dist / 0.08),  # ~5 km/h walking
+                "walk_minutes": max(1, round(dist / 0.075)),  # ~4.5 km/h walking
             })
     return sorted(results, key=lambda x: x["distance_km"])
 
@@ -60,7 +60,7 @@ def alternatives_for_bus(bus_id: int, db: Session = Depends(get_db)):
 
     pct = (bus.current_passengers / bus.total_capacity * 100) if bus.total_capacity > 0 else 0
 
-    nearby = nearby_stations(lat=bus.latitude, lng=bus.longitude, radius_km=2.0, db=db)
+    nearby = nearby_stations(lat=bus.latitude, lng=bus.longitude, radius_km=3.5, db=db)
 
     if pct >= 90:
         suggestion = f"{bus.bus_number} is full — take alternative transit nearby"
