@@ -31,17 +31,17 @@ export default function ToastContainer() {
   const remove = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
 
   const icon = (type: ToastItem['type']) => {
-    if (type === 'success') return <CheckCircle className="w-5 h-5 text-green-400" />;
-    if (type === 'error') return <AlertTriangle className="w-5 h-5 text-red-400" />;
-    if (type === 'warning') return <AlertTriangle className="w-5 h-5 text-yellow-400" />;
-    return <Info className="w-5 h-5 text-blue-400" />;
+    if (type === 'success') return <CheckCircle className="w-5 h-5 text-green-600" />;
+    if (type === 'error') return <AlertTriangle className="w-5 h-5 text-red-600" />;
+    if (type === 'warning') return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
+    return <Info className="w-5 h-5 text-blue-600" />;
   };
 
   const bg = (type: ToastItem['type']) => {
-    if (type === 'success') return 'bg-green-900/90 border-green-700';
-    if (type === 'error') return 'bg-red-900/90 border-red-700';
-    if (type === 'warning') return 'bg-yellow-900/90 border-yellow-700';
-    return 'bg-blue-900/90 border-blue-700';
+    if (type === 'success') return 'bg-green-50 border-green-300';
+    if (type === 'error') return 'bg-red-50 border-red-300';
+    if (type === 'warning') return 'bg-yellow-50 border-yellow-300';
+    return 'bg-blue-50 border-blue-300';
   };
 
   if (toasts.length === 0) return null;
@@ -54,8 +54,8 @@ export default function ToastContainer() {
           className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm animate-[slideIn_0.3s_ease-out] ${bg(t.type)}`}
         >
           {icon(t.type)}
-          <p className="text-sm text-white flex-1">{t.message}</p>
-          <button onClick={() => remove(t.id)} className="text-white/50 hover:text-white">
+          <p className="text-sm text-gray-900 flex-1">{t.message}</p>
+          <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-700">
             <X className="w-4 h-4" />
           </button>
         </div>

@@ -292,25 +292,25 @@ export default function AdminDashboard() {
   ) || demandTrends[0];
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-gray-50">
       <RoleNavbar />
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-12 z-20">
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-12 z-20">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 rounded-lg p-2">
               <Activity className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">SEERPAYANAM Control Center</h1>
-              <p className="text-xs text-slate-400">Admin: {user?.name}</p>
+              <h1 className="text-lg font-bold text-gray-900">SEERPAYANAM Control Center</h1>
+              <p className="text-xs text-gray-500">Admin: {user?.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-              <span className="text-xs text-slate-400">{connected ? 'Live' : 'Offline'}</span>
+              <span className="text-xs text-gray-500">{connected ? 'Live' : 'Offline'}</span>
             </div>
-            <button onClick={logout} className="p-2 text-slate-400 hover:text-red-400">
+            <button onClick={logout} className="p-2 text-gray-400 hover:text-red-500">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
@@ -326,7 +326,7 @@ export default function AdminDashboard() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                tab === t.key ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
+                tab === t.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:text-gray-900 hover:bg-gray-200'
               }`}
             >
               {t.label}

@@ -29,7 +29,6 @@ export default function ConductorScanner() {
   const [processing, setProcessing] = useState(false);
   const [manualCard, setManualCard] = useState('');
 
-  // Audio chime feedback
   const playChime = (success: boolean) => {
     try {
       const ctx = new AudioContext();
@@ -38,9 +37,9 @@ export default function ConductorScanner() {
       gain.gain.value = 0.25;
       osc.connect(gain).connect(ctx.destination);
       if (success) {
-        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
-        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
         osc.start();
         osc.stop(ctx.currentTime + 0.35);
       } else {
@@ -120,25 +119,25 @@ export default function ConductorScanner() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <RoleNavbar />
 
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-900 to-indigo-950 border-b border-slate-800 px-4 py-4">
+      <header className="bg-white border-b border-gray-200 shadow-sm px-4 py-4">
         <div className="max-w-xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <ScanLine className="w-6 h-6 text-emerald-400" />
-              <h1 className="text-lg font-bold text-white">Smart Card & QR Scanner</h1>
+              <ScanLine className="w-6 h-6 text-emerald-600" />
+              <h1 className="text-lg font-bold text-gray-900">Smart Card & QR Scanner</h1>
             </div>
-            <p className="text-xs text-blue-200 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Electronic Ticketing Machine (ETM) / Turnstile Validation Point
             </p>
           </div>
 
           {/* Active Bus Selector Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-300 font-medium shrink-0">Conducting Bus:</span>
+            <span className="text-xs text-gray-700 font-medium shrink-0">Conducting Bus:</span>
             <select
               value={selectedBus?.id ?? ''}
               onChange={(e) => {
@@ -146,7 +145,7 @@ export default function ConductorScanner() {
                 if (b) setSelectedBus(b);
                 setResult(null);
               }}
-              className="bg-slate-900 text-white border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-blue-500 shadow-sm"
+              className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-blue-500 shadow-sm"
             >
               {buses.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -160,30 +159,30 @@ export default function ConductorScanner() {
 
       <div className="max-w-xl mx-auto px-4 py-5 space-y-4">
         {/* Step-by-Step Operator Guide */}
-        <div className="bg-blue-950/40 border border-blue-800/60 rounded-xl p-3.5 text-xs text-blue-200 flex items-start gap-3">
-          <HelpCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-800 flex items-start gap-3">
+          <HelpCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="font-bold text-white">How to Validate a Passenger:</p>
-            <p className="text-[11px] leading-relaxed text-slate-300">
+            <p className="font-bold text-gray-900">How to Validate a Passenger:</p>
+            <p className="text-[11px] leading-relaxed text-gray-700">
               <strong>Method 1:</strong> Point camera at any passenger QR code below. <br />
               <strong>Method 2:</strong> Click any passenger in <em>1-Click Fast-Tap Smart Passes</em> to instantly simulate boarding. <br />
-              <strong>Method 3:</strong> Enter or paste a card ID (e.g. <code className="text-emerald-300 font-mono">TN-MTC-2026-0001</code>) into manual search.
+              <strong>Method 3:</strong> Enter or paste a card ID (e.g. <code className="text-emerald-700 font-mono">TN-MTC-2026-0001</code>) into manual search.
             </p>
           </div>
         </div>
 
         {/* Selected Bus Live Occupancy Card */}
         {selectedBus && (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-2">
-                <BusIcon className="w-4 h-4 text-blue-400" />
-                <span className="font-bold text-white">{selectedBus.bus_number}</span>
+                <BusIcon className="w-4 h-4 text-blue-600" />
+                <span className="font-bold text-gray-900">{selectedBus.bus_number}</span>
               </div>
               <CrowdBadge status={selectedBus.crowd_status} />
             </div>
 
-            <div className="w-full bg-slate-800 rounded-full h-3 mb-2">
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
               <div
                 className={`h-3 rounded-full transition-all duration-500 ${
                   selectedBus.crowd_status === 'red' ? 'bg-red-500' :
@@ -194,9 +193,9 @@ export default function ConductorScanner() {
               />
             </div>
 
-            <div className="flex justify-between text-xs text-slate-400">
-              <span>Occupancy: <strong className="text-white">{selectedBus.current_passengers}</strong> / {selectedBus.total_capacity} pax ({occupancyPct}%)</span>
-              <span>Available Capacity: <strong className="text-emerald-400">{Math.max(0, selectedBus.total_capacity - selectedBus.current_passengers)}</strong></span>
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Occupancy: <strong className="text-gray-900">{selectedBus.current_passengers}</strong> / {selectedBus.total_capacity} pax ({occupancyPct}%)</span>
+              <span>Available Capacity: <strong className="text-emerald-600">{Math.max(0, selectedBus.total_capacity - selectedBus.current_passengers)}</strong></span>
             </div>
           </div>
         )}
@@ -209,7 +208,7 @@ export default function ConductorScanner() {
             className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
               action === 'board'
                 ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/50'
-                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-900'
             }`}
           >
             <LogIn className="w-4 h-4" /> Boarding (Deduct ₹10)
@@ -220,7 +219,7 @@ export default function ConductorScanner() {
             className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
               action === 'alight'
                 ? 'bg-orange-600 text-white shadow-lg ring-2 ring-orange-400/50'
-                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-900'
             }`}
           >
             <LogOut className="w-4 h-4" /> Alighting (Free Space)
@@ -232,36 +231,36 @@ export default function ConductorScanner() {
           <div
             className={`rounded-xl p-4 border flex items-center gap-3 animate-[fadeIn_0.2s_ease-out] ${
               result.success
-                ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200'
-                : 'bg-red-950/90 border-red-500 text-red-200'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                : 'bg-red-50 border-red-300 text-red-800'
             }`}
           >
             {result.success ? (
-              <CheckCircle className="w-6 h-6 text-emerald-400 shrink-0" />
+              <CheckCircle className="w-6 h-6 text-emerald-500 shrink-0" />
             ) : (
-              <XCircle className="w-6 h-6 text-red-400 shrink-0" />
+              <XCircle className="w-6 h-6 text-red-500 shrink-0" />
             )}
             <div className="flex-1 text-xs">
               <p className="font-bold text-sm">{result.success ? 'Validation Successful' : 'Validation Restricted'}</p>
               <p className="mt-0.5">{result.message}</p>
               {result.fare > 0 && (
-                <p className="text-emerald-300 font-bold mt-1">₹{result.fare.toFixed(2)} deducted from passenger wallet</p>
+                <p className="text-emerald-700 font-bold mt-1">₹{result.fare.toFixed(2)} deducted from passenger wallet</p>
               )}
             </div>
           </div>
         )}
 
         {/* SECTION 1: Camera Scanner */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Camera className="w-4 h-4 text-blue-400" /> Device Camera QR Scanner
+            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Camera className="w-4 h-4 text-blue-600" /> Device Camera QR Scanner
             </span>
             {scanning && (
               <button
                 type="button"
                 onClick={() => setScanning(false)}
-                className="text-xs text-red-400 hover:text-red-300 font-semibold"
+                className="text-xs text-red-500 hover:text-red-700 font-semibold"
               >
                 Close Camera
               </button>
@@ -285,17 +284,17 @@ export default function ConductorScanner() {
           )}
         </div>
 
-        {/* SECTION 2: 1-Click Fast Tap Passes (Simulated Physical Smart Cards) */}
-        <div className="bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-900/60 rounded-xl p-4">
+        {/* SECTION 2: 1-Click Fast Tap Passes */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Smartphone className="w-4 h-4 text-indigo-400" /> 1-Click Fast-Tap Smart Passes
+            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Smartphone className="w-4 h-4 text-indigo-600" /> 1-Click Fast-Tap Smart Passes
             </span>
-            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">
+            <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
               Zero Camera Required
             </span>
           </div>
-          <p className="text-xs text-slate-400 mb-3">
+          <p className="text-xs text-gray-500 mb-3">
             Click any commuter below to simulate tapping their physical RFID smart transit card on this bus:
           </p>
 
@@ -306,13 +305,13 @@ export default function ConductorScanner() {
                 type="button"
                 onClick={() => handleScan(p.card)}
                 disabled={processing}
-                className="p-3 bg-slate-950/80 hover:bg-indigo-900/40 border border-slate-800 hover:border-indigo-500/50 rounded-lg text-left transition-all disabled:opacity-50 flex items-center justify-between group"
+                className="p-3 bg-white hover:bg-indigo-50 border border-gray-200 hover:border-indigo-300 rounded-lg text-left transition-all disabled:opacity-50 flex items-center justify-between group"
               >
                 <div className="min-w-0 pr-2">
-                  <p className="font-bold text-xs text-white group-hover:text-indigo-200 truncate">{p.name}</p>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{p.card}</p>
+                  <p className="font-bold text-xs text-gray-900 group-hover:text-indigo-600 truncate">{p.name}</p>
+                  <p className="text-[10px] text-gray-400 font-mono mt-0.5">{p.card}</p>
                 </div>
-                <span className="text-xs text-indigo-400 font-bold shrink-0">
+                <span className="text-xs text-indigo-600 font-bold shrink-0">
                   ⚡ {action === 'board' ? 'Tap In' : 'Tap Out'}
                 </span>
               </button>
@@ -321,8 +320,8 @@ export default function ConductorScanner() {
         </div>
 
         {/* SECTION 3: Manual Card Number Entry */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
             Manual Smart Card Number Entry
           </p>
           <div className="flex gap-2">
@@ -332,7 +331,7 @@ export default function ConductorScanner() {
               onChange={(e) => setManualCard(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
               placeholder="e.g. TN-MTC-2026-0001"
-              className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="button"
