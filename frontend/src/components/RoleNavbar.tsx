@@ -47,7 +47,7 @@ export default function RoleNavbar() {
               <Crown className="w-4 h-4 text-yellow-300" />
             </div>
             <div>
-              <span className="font-bold text-white text-sm tracking-wide">CrowdMove</span>
+              <span className="font-bold text-white text-sm tracking-wide">SEERPAYANAM</span>
               <span className="text-[10px] text-yellow-300 ml-1.5 font-bold px-1.5 py-0.5 bg-yellow-950/80 rounded border border-yellow-700/60">
                 MASTER ADMIN ACCESS
               </span>

@@ -301,7 +301,7 @@ export default function AdminDashboard() {
               <Activity className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">CrowdMove Control Center</h1>
+              <h1 className="text-lg font-bold text-white">SEERPAYANAM Control Center</h1>
               <p className="text-xs text-slate-400">Admin: {user?.name}</p>
             </div>
           </div>

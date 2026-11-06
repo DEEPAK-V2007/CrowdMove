@@ -12,7 +12,7 @@ from simulation import sim_engine
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="TN-ITIS CrowdMove API", version="1.0.0")
+app = FastAPI(title="TN-ITIS SEERPAYANAM API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -82,7 +82,7 @@ async def websocket_endpoint(ws: WebSocket):
 def health():
     return {
         "status": "ok",
-        "app": "TN-ITIS CrowdMove",
+        "app": "TN-ITIS SEERPAYANAM",
         "simulation_running": sim_engine.running,
         "tick_count": sim_engine.tick_count
     }

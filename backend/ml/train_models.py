@@ -148,7 +148,7 @@ def main():
     print("Feature Importances:", feat_imp)
 
     # Output directory
-    output_dir = r"CrowdMove\backend\ml"
+    output_dir = r"SEERPAYANAM\backend\ml"
     os.makedirs(output_dir, exist_ok=True)
 
     # Save model and mappings

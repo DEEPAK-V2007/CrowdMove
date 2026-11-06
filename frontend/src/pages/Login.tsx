@@ -62,7 +62,7 @@ export default function Login() {
             <span className="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl shadow-lg shadow-blue-950">
               <Bus className="w-8 h-8 text-white" />
             </span>
-            CrowdMove
+            SEERPAYANAM
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm max-w-xl mx-auto mt-2 leading-relaxed">
             Please select your authorized department portal below. Each portal operates as an independent, segregated subsystem.
