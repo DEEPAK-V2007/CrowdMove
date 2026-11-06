@@ -32,7 +32,10 @@ class SimulationEngine:
         if self.running:
             return
         self.running = True
-        target_loop = loop or asyncio.get_event_loop()
+        try:
+            target_loop = loop or asyncio.get_running_loop()
+        except RuntimeError:
+            target_loop = asyncio.get_event_loop()
         self.task = target_loop.create_task(self._loop())
 
     def stop(self):
@@ -55,10 +58,16 @@ class SimulationEngine:
         self.festival_multiplier = 1.0
         prediction_engine.reset()
         buses = db.query(Bus).all()
-        for bus in buses:
-            bus.current_passengers = 0
-            bus.boarded_count = 0
-            bus.alighted_count = 0
+        for i, bus in enumerate(buses):
+            if bus.is_active:
+                ratio = [0.35, 0.58, 0.74, 0.88, 0.42, 0.65, 0.91, 0.48][i % 8]
+                bus.current_passengers = int(bus.total_capacity * ratio)
+                bus.boarded_count = bus.current_passengers
+                bus.alighted_count = int(bus.current_passengers * 0.2)
+            else:
+                bus.current_passengers = 0
+                bus.boarded_count = 0
+                bus.alighted_count = 0
             bus.current_stop_index = 0
             route = db.query(BusRoute).get(bus.route_id)
             if route and route.stops:

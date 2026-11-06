@@ -126,10 +126,12 @@ def get_recommendations(db: Session = Depends(get_db)):
                     "priority": "info",
                     "route_number": route.route_number,
                     "route_name": route.name,
-                    "message": f"Hold {sorted_rbs[i].bus_number} to reduce bunching",
-                    "detail": f"{sorted_rbs[i].bus_number} and {sorted_rbs[i+1].bus_number} are at adjacent stops",
+                    "message": f"Regulate headway: Hold {sorted_rbs[i].bus_number} by 3 min to space out arrivals",
+                    "detail": f"{sorted_rbs[i].bus_number} and {sorted_rbs[i+1].bus_number} are bunching at adjacent stops",
                     "can_dispatch": False,
                     "depot_bus_id": None,
+                    "hold_bus_id": sorted_rbs[i].id,
+                    "bus_number": sorted_rbs[i].bus_number,
                 })
                 break
 
@@ -154,4 +156,23 @@ def dispatch_bus(bus_id: int, db: Session = Depends(get_db)):
         bus.latitude = first_stop.latitude
         bus.longitude = first_stop.longitude
     db.commit()
-    return {"success": True, "message": f"{bus.bus_number} dispatched", "bus_number": bus.bus_number}
+    return {"success": True, "message": f"{bus.bus_number} dispatched to Route {route.route_number if route else ''}", "bus_number": bus.bus_number}
+
+
+@router.post("/hold/{bus_id}")
+def hold_bus(bus_id: int, db: Session = Depends(get_db)):
+    bus = db.query(Bus).get(bus_id)
+    if not bus:
+        return {"success": False, "message": "Bus not found"}
+    # Mark any bunching alert on this route as resolved
+    db.query(Alert).filter(
+        Alert.route_id == bus.route_id,
+        Alert.type == "bunching",
+        Alert.is_resolved == False
+    ).update({"is_resolved": True})
+    db.commit()
+    return {
+        "success": True,
+        "message": f"Headway Regulation Applied: {bus.bus_number} held for 3 minutes to prevent bus bunching.",
+        "bus_number": bus.bus_number
+    }

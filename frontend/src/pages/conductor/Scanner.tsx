@@ -1,13 +1,25 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { busApi, passengerApi, type Bus } from '../../api';
 import { useSimulation } from '../../hooks/useSimulation';
 import QrScanner from '../../components/QrScanner';
 import CrowdBadge from '../../components/CrowdBadge';
-import { Camera, CheckCircle, LogIn, LogOut, ScanLine, XCircle } from 'lucide-react';
+import RoleNavbar from '../../components/RoleNavbar';
+import { Camera, CheckCircle, LogIn, LogOut, ScanLine, XCircle, Bus as BusIcon, Smartphone, HelpCircle } from 'lucide-react';
 
 type ScanResult = { success: boolean; message: string; fare: number } | null;
 
+const DEMO_PASSENGERS = [
+  { name: 'Priya Muthukumar', card: 'TN-MTC-2026-0001', type: 'General Commuter Pass' },
+  { name: 'Arun Karthik', card: 'TN-MTC-2026-0002', type: 'Daily Smart Pass' },
+  { name: 'Divya Sundaram', card: 'TN-MTC-2026-0003', type: 'Student Subsidized Pass' },
+  { name: 'Vikram Raman', card: 'TN-MTC-2026-0004', type: 'Metro Transfer Pass' },
+  { name: 'Lakshmi Narayanan', card: 'TN-MTC-2026-0005', type: 'Senior Citizen Pass' },
+  { name: 'Ganesh Thangavel', card: 'TN-MTC-2026-0006', type: 'Suburban Radial Pass' },
+];
+
 export default function ConductorScanner() {
+  const [searchParams] = useSearchParams();
   const { buses: wsBuses } = useSimulation();
   const [buses, setBuses] = useState<Bus[]>([]);
   const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
@@ -17,17 +29,57 @@ export default function ConductorScanner() {
   const [processing, setProcessing] = useState(false);
   const [manualCard, setManualCard] = useState('');
 
+  // Audio chime feedback
+  const playChime = (success: boolean) => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.25;
+      osc.connect(gain).connect(ctx.destination);
+      if (success) {
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } else {
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        osc.frequency.setValueAtTime(180, ctx.currentTime + 0.15);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      }
+    } catch {
+      // AudioContext unavailable
+    }
+  };
+
   useEffect(() => {
-    busApi.list(true).then(r => setBuses(r.data));
+    const cardParam = searchParams.get('card');
+    if (cardParam) {
+      setManualCard(cardParam);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    busApi.list(true).then((r) => {
+      const active = r.data.filter(b => b.is_active);
+      setBuses(active);
+      if (active.length > 0) {
+        setSelectedBus(active[0]);
+      }
+    });
   }, []);
 
   useEffect(() => {
     if (wsBuses.length > 0) {
-      const active = wsBuses.filter(b => b.is_active);
+      const active = wsBuses.filter((b) => b.is_active);
       setBuses(active);
       if (selectedBus) {
-        const updated = active.find(b => b.id === selectedBus.id);
+        const updated = active.find((b) => b.id === selectedBus.id);
         if (updated) setSelectedBus(updated);
+      } else if (active.length > 0) {
+        setSelectedBus(active[0]);
       }
     }
   }, [wsBuses]);
@@ -35,15 +87,22 @@ export default function ConductorScanner() {
   const handleScan = async (cardNumber: string) => {
     if (!selectedBus || processing) return;
     setProcessing(true);
-    setScanning(false);
+    setResult(null);
+
     try {
       const res = await passengerApi.scan(cardNumber, selectedBus.id, action);
-      setResult({ success: res.data.success, message: res.data.message, fare: res.data.fare });
-      if (res.data.success) {
-        setSelectedBus(prev => prev ? { ...prev, current_passengers: res.data.current_passengers } : null);
+      const isOk = res.data.success;
+      playChime(isOk);
+      setResult({ success: isOk, message: res.data.message, fare: res.data.fare });
+
+      if (isOk) {
+        setSelectedBus((prev) =>
+          prev ? { ...prev, current_passengers: res.data.current_passengers } : null
+        );
       }
     } catch {
-      setResult({ success: false, message: 'Scan failed — try again', fare: 0 });
+      playChime(false);
+      setResult({ success: false, message: 'Scan validation failed — please check connection', fare: 0 });
     } finally {
       setProcessing(false);
     }
@@ -56,169 +115,232 @@ export default function ConductorScanner() {
     }
   };
 
-  if (!selectedBus) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-blue-600 text-white px-4 py-4">
-          <div className="max-w-lg mx-auto">
-            <div className="flex items-center gap-2">
-              <ScanLine className="w-6 h-6" />
-              <h1 className="text-lg font-bold">Conductor Scanner</h1>
-            </div>
-            <p className="text-blue-200 text-sm mt-1">Select your bus to begin scanning</p>
-          </div>
-        </header>
-        <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
-          {buses.map(bus => (
-            <button
-              key={bus.id}
-              onClick={() => setSelectedBus(bus)}
-              className="w-full bg-white rounded-xl p-4 border text-left flex items-center justify-between hover:border-blue-300 transition-colors"
-            >
-              <div>
-                <p className="font-semibold text-gray-900">{bus.bus_number}</p>
-                <p className="text-sm text-gray-500">{bus.current_passengers}/{bus.total_capacity} passengers</p>
-              </div>
-              <CrowdBadge status={bus.crowd_status} />
-            </button>
-          ))}
-          {buses.length === 0 && (
-            <p className="text-center text-gray-400 py-8">No active buses</p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const occupancyPct = selectedBus.total_capacity > 0
+  const occupancyPct = selectedBus && selectedBus.total_capacity > 0
     ? Math.round((selectedBus.current_passengers / selectedBus.total_capacity) * 100)
     : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-600 text-white px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <RoleNavbar />
+
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-900 to-indigo-950 border-b border-slate-800 px-4 py-4">
+        <div className="max-w-xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-bold">{selectedBus.bus_number}</h1>
-            <p className="text-blue-200 text-sm">
-              {selectedBus.current_passengers}/{selectedBus.total_capacity} passengers · {occupancyPct}%
+            <div className="flex items-center gap-2">
+              <ScanLine className="w-6 h-6 text-emerald-400" />
+              <h1 className="text-lg font-bold text-white">Smart Card & QR Scanner</h1>
+            </div>
+            <p className="text-xs text-blue-200 mt-0.5">
+              Electronic Ticketing Machine (ETM) / Turnstile Validation Point
             </p>
           </div>
-          <button onClick={() => { setSelectedBus(null); setResult(null); setScanning(false); }}
-            className="text-sm bg-white/20 px-3 py-1.5 rounded-lg hover:bg-white/30">
-            Change Bus
-          </button>
+
+          {/* Active Bus Selector Dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-300 font-medium shrink-0">Conducting Bus:</span>
+            <select
+              value={selectedBus?.id ?? ''}
+              onChange={(e) => {
+                const b = buses.find((item) => item.id === Number(e.target.value));
+                if (b) setSelectedBus(b);
+                setResult(null);
+              }}
+              className="bg-slate-900 text-white border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-blue-500 shadow-sm"
+            >
+              {buses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.bus_number} ({b.current_passengers}/{b.total_capacity} pax)
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
-        {/* Occupancy bar */}
-        <div className="bg-white rounded-xl p-4 border">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-gray-500">Bus Occupancy</span>
-            <CrowdBadge status={selectedBus.crowd_status} />
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div
-              className={`h-3 rounded-full transition-all duration-500 ${
-                selectedBus.crowd_status === 'red' ? 'bg-red-500' :
-                selectedBus.crowd_status === 'orange' ? 'bg-orange-500' :
-                selectedBus.crowd_status === 'yellow' ? 'bg-yellow-500' : 'bg-green-500'
-              }`}
-              style={{ width: `${Math.min(occupancyPct, 100)}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>{selectedBus.current_passengers} onboard</span>
-            <span>{selectedBus.total_capacity - selectedBus.current_passengers} remaining</span>
+      <div className="max-w-xl mx-auto px-4 py-5 space-y-4">
+        {/* Step-by-Step Operator Guide */}
+        <div className="bg-blue-950/40 border border-blue-800/60 rounded-xl p-3.5 text-xs text-blue-200 flex items-start gap-3">
+          <HelpCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-white">How to Validate a Passenger:</p>
+            <p className="text-[11px] leading-relaxed text-slate-300">
+              <strong>Method 1:</strong> Point camera at any passenger QR code below. <br />
+              <strong>Method 2:</strong> Click any passenger in <em>1-Click Fast-Tap Smart Passes</em> to instantly simulate boarding. <br />
+              <strong>Method 3:</strong> Enter or paste a card ID (e.g. <code className="text-emerald-300 font-mono">TN-MTC-2026-0001</code>) into manual search.
+            </p>
           </div>
         </div>
 
-        {/* Action toggle */}
-        <div className="flex gap-2">
+        {/* Selected Bus Live Occupancy Card */}
+        {selectedBus && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center gap-2">
+                <BusIcon className="w-4 h-4 text-blue-400" />
+                <span className="font-bold text-white">{selectedBus.bus_number}</span>
+              </div>
+              <CrowdBadge status={selectedBus.crowd_status} />
+            </div>
+
+            <div className="w-full bg-slate-800 rounded-full h-3 mb-2">
+              <div
+                className={`h-3 rounded-full transition-all duration-500 ${
+                  selectedBus.crowd_status === 'red' ? 'bg-red-500' :
+                  selectedBus.crowd_status === 'orange' ? 'bg-orange-500' :
+                  selectedBus.crowd_status === 'yellow' ? 'bg-yellow-500' : 'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.min(occupancyPct, 100)}%` }}
+              />
+            </div>
+
+            <div className="flex justify-between text-xs text-slate-400">
+              <span>Occupancy: <strong className="text-white">{selectedBus.current_passengers}</strong> / {selectedBus.total_capacity} pax ({occupancyPct}%)</span>
+              <span>Available Capacity: <strong className="text-emerald-400">{Math.max(0, selectedBus.total_capacity - selectedBus.current_passengers)}</strong></span>
+            </div>
+          </div>
+        )}
+
+        {/* Validation Action Mode (Boarding / Alighting) */}
+        <div className="grid grid-cols-2 gap-2">
           <button
+            type="button"
             onClick={() => setAction('board')}
-            className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors ${
-              action === 'board' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 border'
+            className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+              action === 'board'
+                ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/50'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            <LogIn className="w-5 h-5" /> Board
+            <LogIn className="w-4 h-4" /> Boarding (Deduct ₹10)
           </button>
           <button
+            type="button"
             onClick={() => setAction('alight')}
-            className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors ${
-              action === 'alight' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 border'
+            className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+              action === 'alight'
+                ? 'bg-orange-600 text-white shadow-lg ring-2 ring-orange-400/50'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            <LogOut className="w-5 h-5" /> Alight
+            <LogOut className="w-4 h-4" /> Alighting (Free Space)
           </button>
         </div>
 
-        {/* Scan result */}
+        {/* Scan Status Toast Banner */}
         {result && (
-          <div className={`rounded-xl p-4 flex items-center gap-3 ${
-            result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-          }`}>
-            {result.success
-              ? <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
-              : <XCircle className="w-6 h-6 text-red-600 shrink-0" />
-            }
-            <div>
-              <p className={`font-medium ${result.success ? 'text-green-800' : 'text-red-800'}`}>
-                {result.message}
-              </p>
+          <div
+            className={`rounded-xl p-4 border flex items-center gap-3 animate-[fadeIn_0.2s_ease-out] ${
+              result.success
+                ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200'
+                : 'bg-red-950/90 border-red-500 text-red-200'
+            }`}
+          >
+            {result.success ? (
+              <CheckCircle className="w-6 h-6 text-emerald-400 shrink-0" />
+            ) : (
+              <XCircle className="w-6 h-6 text-red-400 shrink-0" />
+            )}
+            <div className="flex-1 text-xs">
+              <p className="font-bold text-sm">{result.success ? 'Validation Successful' : 'Validation Restricted'}</p>
+              <p className="mt-0.5">{result.message}</p>
               {result.fare > 0 && (
-                <p className="text-sm text-green-600">Fare deducted: {'₹'}{result.fare.toFixed(2)}</p>
+                <p className="text-emerald-300 font-bold mt-1">₹{result.fare.toFixed(2)} deducted from passenger wallet</p>
               )}
             </div>
-            <button onClick={() => setResult(null)} className="ml-auto text-gray-400 hover:text-gray-600">
-              <XCircle className="w-5 h-5" />
-            </button>
           </div>
         )}
 
-        {/* Camera scanner */}
-        {scanning ? (
-          <div className="bg-white rounded-xl border overflow-hidden">
-            <div className="bg-gray-900 p-2 flex items-center justify-between">
-              <span className="text-white text-sm flex items-center gap-1.5">
-                <Camera className="w-4 h-4" /> Scanning...
-              </span>
-              <button onClick={() => setScanning(false)} className="text-gray-400 hover:text-white text-sm">
-                Cancel
+        {/* SECTION 1: Camera Scanner */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Camera className="w-4 h-4 text-blue-400" /> Device Camera QR Scanner
+            </span>
+            {scanning && (
+              <button
+                type="button"
+                onClick={() => setScanning(false)}
+                className="text-xs text-red-400 hover:text-red-300 font-semibold"
+              >
+                Close Camera
               </button>
-            </div>
-            <QrScanner active={scanning} onScan={handleScan} />
+            )}
           </div>
-        ) : (
-          <button
-            onClick={() => { setResult(null); setScanning(true); }}
-            disabled={processing}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-          >
-            <Camera className="w-5 h-5" />
-            {processing ? 'Processing...' : 'Scan QR Code'}
-          </button>
-        )}
 
-        {/* Manual entry fallback */}
-        <div className="bg-white rounded-xl p-4 border">
-          <p className="text-sm text-gray-500 mb-2">Manual Card Entry</p>
+          {scanning ? (
+            <QrScanner onScan={handleScan} active={scanning} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setResult(null);
+                setScanning(true);
+              }}
+              disabled={processing}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md transition-colors disabled:opacity-50"
+            >
+              <Camera className="w-4 h-4" /> Start Device Camera to Scan QR Code
+            </button>
+          )}
+        </div>
+
+        {/* SECTION 2: 1-Click Fast Tap Passes (Simulated Physical Smart Cards) */}
+        <div className="bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-900/60 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Smartphone className="w-4 h-4 text-indigo-400" /> 1-Click Fast-Tap Smart Passes
+            </span>
+            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">
+              Zero Camera Required
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mb-3">
+            Click any commuter below to simulate tapping their physical RFID smart transit card on this bus:
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {DEMO_PASSENGERS.map((p) => (
+              <button
+                key={p.card}
+                type="button"
+                onClick={() => handleScan(p.card)}
+                disabled={processing}
+                className="p-3 bg-slate-950/80 hover:bg-indigo-900/40 border border-slate-800 hover:border-indigo-500/50 rounded-lg text-left transition-all disabled:opacity-50 flex items-center justify-between group"
+              >
+                <div className="min-w-0 pr-2">
+                  <p className="font-bold text-xs text-white group-hover:text-indigo-200 truncate">{p.name}</p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{p.card}</p>
+                </div>
+                <span className="text-xs text-indigo-400 font-bold shrink-0">
+                  ⚡ {action === 'board' ? 'Tap In' : 'Tap Out'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* SECTION 3: Manual Card Number Entry */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            Manual Smart Card Number Entry
+          </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={manualCard}
-              onChange={e => setManualCard(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleManualScan()}
-              placeholder="e.g. CM2024001"
-              className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => setManualCard(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
+              placeholder="e.g. TN-MTC-2026-0001"
+              className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
+              type="button"
               onClick={handleManualScan}
               disabled={!manualCard.trim() || processing}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
             >
-              {action === 'board' ? 'Board' : 'Alight'}
+              {action === 'board' ? 'Validate Board' : 'Validate Alight'}
             </button>
           </div>
         </div>

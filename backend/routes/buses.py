@@ -1,10 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Bus, BusRoute, BusStop
 from schemas import BusOut, BusDetailOut, BusRouteOut
+from ws_manager import manager
 
 router = APIRouter(prefix="/api/buses", tags=["buses"])
+
+
+class UpdateCapacityRequest(BaseModel):
+    total_capacity: int
+    seated_capacity: int | None = None
 
 
 def compute_crowd_status(current: int, capacity: int) -> tuple[str, float]:
@@ -63,6 +70,46 @@ def get_bus(bus_id: int, db: Session = Depends(get_db)):
     return out
 
 
+@router.patch("/{bus_id}/capacity")
+async def update_bus_capacity(bus_id: int, req: UpdateCapacityRequest, db: Session = Depends(get_db)):
+    """Allows transit administrator to configure bus operational capacity."""
+    bus = db.query(Bus).get(bus_id)
+    if not bus:
+        raise HTTPException(status_code=404, detail="Bus not found")
+
+    if req.total_capacity < 10 or req.total_capacity > 120:
+        raise HTTPException(status_code=400, detail="Total capacity must be between 10 and 120")
+
+    bus.total_capacity = req.total_capacity
+    if req.seated_capacity is not None:
+        bus.seated_capacity = min(req.seated_capacity, req.total_capacity)
+    else:
+        bus.seated_capacity = int(req.total_capacity * 0.6)
+
+    db.commit()
+
+    status, pct = compute_crowd_status(bus.current_passengers, bus.total_capacity)
+    await manager.broadcast("bus_single_update", {
+        "bus_id": bus.id,
+        "bus_number": bus.bus_number,
+        "total_capacity": bus.total_capacity,
+        "seated_capacity": bus.seated_capacity,
+        "current_passengers": bus.current_passengers,
+        "occupancy_percent": pct,
+        "crowd_status": status,
+        "action": "capacity_configured"
+    })
+
+    return {
+        "success": True,
+        "bus_number": bus.bus_number,
+        "total_capacity": bus.total_capacity,
+        "seated_capacity": bus.seated_capacity,
+        "occupancy_percent": pct,
+        "crowd_status": status
+    }
+
+
 @router.get("/route/{route_id}", response_model=list[BusOut])
 def get_buses_by_route(route_id: int, db: Session = Depends(get_db)):
     buses = db.query(Bus).filter(Bus.route_id == route_id, Bus.is_active == True).all()
@@ -73,7 +120,7 @@ def get_buses_by_route(route_id: int, db: Session = Depends(get_db)):
 def get_driver_bus(driver_id: int, db: Session = Depends(get_db)):
     bus = db.query(Bus).filter(Bus.driver_id == driver_id).first()
     if not bus:
-        raise HTTPException(status_code=404, detail="No bus assigned")
+        raise HTTPException(status_code=404, detail="No bus assigned to this driver")
     out = bus_to_out(bus).model_dump()
     route = db.query(BusRoute).get(bus.route_id)
     if route:

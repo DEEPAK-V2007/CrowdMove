@@ -1,117 +1,119 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { Bus, ScanLine, Shield, User } from 'lucide-react';
-
-const DEMO_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@crowdmove.in', password: 'test123', icon: Shield, color: 'bg-purple-600' },
-  { label: 'Driver', email: 'rajesh@crowdmove.in', password: 'test123', icon: Bus, color: 'bg-blue-600' },
-  { label: 'Passenger', email: 'priya@gmail.com', password: 'test123', icon: User, color: 'bg-green-600' },
-];
+import { Bus, Camera, CreditCard, Navigation, Shield, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function Login() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await login(email, password);
-    } catch {
-      setError('Invalid credentials');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickLogin = async (em: string, pw: string) => {
-    setError('');
-    setLoading(true);
-    try {
-      await login(em, pw);
-    } catch {
-      setError('Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const portals = [
+    {
+      title: 'Commuter Smart Pass Portal',
+      subtitle: 'Passengers & Public Citizens',
+      description: 'Access your prepaid travel wallet balance, digital QR boarding pass, live bus crowd tracking, and multimodal Chennai Metro alternatives.',
+      icon: CreditCard,
+      color: 'from-emerald-950/70 to-slate-900 border-emerald-500/40 text-emerald-400',
+      btnColor: 'bg-emerald-600 hover:bg-emerald-500 text-white',
+      badge: 'Public Commuter',
+      to: '/login/passenger',
+      btnLabel: 'Proceed to Commuter Sign In',
+    },
+    {
+      title: 'Conductor ETM Terminal',
+      subtitle: 'Onboard Ticket Examiners',
+      description: 'Handheld Electronic Ticketing Machine (ETM) interface for contactless RFID smart card validation, QR code boarding, and fare deduction.',
+      icon: Camera,
+      color: 'from-cyan-950/70 to-slate-900 border-cyan-500/40 text-cyan-400',
+      btnColor: 'bg-cyan-600 hover:bg-cyan-500 text-white',
+      badge: 'ETM Hardware',
+      to: '/login/conductor',
+      btnLabel: 'Proceed to Conductor Terminal',
+    },
+    {
+      title: 'Driver In-Cab HUD Console',
+      subtitle: 'Assigned MTC Vehicle Drivers',
+      description: 'In-bus occupancy gauge telemetry, upcoming stop platform demand preview, door safety lock, and 90% overcrowding audio alarm.',
+      icon: Navigation,
+      color: 'from-amber-950/70 to-slate-900 border-amber-500/40 text-amber-400',
+      btnColor: 'bg-amber-600 hover:bg-amber-500 text-white',
+      badge: 'Vehicle Cockpit',
+      to: '/login/driver',
+      btnLabel: 'Proceed to Driver Sign In',
+    },
+    {
+      title: 'Central Operations Command Center',
+      subtitle: 'MTC Administrative Controllers',
+      description: 'Master Administrative Clearance for fleet control, real-time GIS tracking, ML overcrowding predictions, proactive bunching regulation, and overall system access.',
+      icon: Shield,
+      color: 'from-blue-950/70 to-slate-900 border-blue-500/40 text-blue-400',
+      btnColor: 'bg-blue-600 hover:bg-blue-500 text-white',
+      badge: 'Overall Authority',
+      to: '/login/admin',
+      btnLabel: 'Proceed to Admin Sign In',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8">
+      <div className="max-w-5xl mx-auto w-full my-auto">
+        {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
-            <Bus className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-blue-950/80 border border-blue-700/60 rounded-full text-blue-300 text-xs font-semibold mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+            Tamil Nadu Intelligent Transit Management System (TN-ITIS)
           </div>
-          <h1 className="text-3xl font-bold text-white">CrowdMove</h1>
-          <p className="text-blue-300 mt-2">Intelligent Transit Management System</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-center justify-center gap-3">
+            <span className="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl shadow-lg shadow-blue-950">
+              <Bus className="w-8 h-8 text-white" />
+            </span>
+            CrowdMove
+          </h1>
+          <p className="text-slate-400 text-xs sm:text-sm max-w-xl mx-auto mt-2 leading-relaxed">
+            Please select your authorized department portal below. Each portal operates as an independent, segregated subsystem.
+          </p>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/10 mb-6">
-          <h2 className="text-white font-semibold mb-4">Quick Demo Login</h2>
-          <div className="grid grid-cols-3 gap-3">
-            {DEMO_ACCOUNTS.map((acc) => (
-              <button
-                key={acc.label}
-                onClick={() => quickLogin(acc.email, acc.password)}
-                disabled={loading}
-                className={`${acc.color} hover:opacity-90 text-white rounded-xl p-4 flex flex-col items-center gap-2 transition-all disabled:opacity-50`}
+        {/* 4 Separate Portal Gateway Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {portals.map((p, i) => {
+            const Icon = p.icon;
+            return (
+              <div
+                key={i}
+                className={`bg-gradient-to-br ${p.color} rounded-2xl p-6 border shadow-xl flex flex-col justify-between transition-all hover:scale-[1.01] hover:border-white/30`}
               >
-                <acc.icon className="w-6 h-6" />
-                <span className="text-sm font-medium">{acc.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+                <div>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-black/50 rounded-xl border border-white/10">
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-bold text-white">{p.title}</h2>
+                        <p className="text-xs font-medium text-slate-400">{p.subtitle}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-slate-300">
+                      {p.badge}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300/90 leading-relaxed mb-6">
+                    {p.description}
+                  </p>
+                </div>
 
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm text-blue-200 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter email"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-blue-200 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter password"
-                required
-              />
-            </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
+                <Link
+                  to={p.to}
+                  className={`w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${p.btnColor}`}
+                >
+                  {p.btnLabel}
+                  <ArrowRight className="w-4 h-4 ml-auto" />
+                </Link>
+              </div>
+            );
+          })}
         </div>
-
-        <Link
-          to="/scanner"
-          className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-2xl font-medium transition-colors"
-        >
-          <ScanLine className="w-5 h-5" />
-          Open Conductor Scanner
-        </Link>
       </div>
+
+      <footer className="text-center text-[11px] text-slate-500 mt-6">
+        Government of Tamil Nadu · Metropolitan Transport Corporation (MTC) Chennai
+      </footer>
     </div>
   );
 }

@@ -5,6 +5,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  quickLoginAs: (role: 'admin' | 'driver' | 'passenger') => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -34,6 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.data.user);
   };
 
+  const quickLoginAs = async (role: 'admin' | 'driver' | 'passenger') => {
+    const creds = {
+      admin: { email: 'admin@crowdmove.in', password: 'test123' },
+      driver: { email: 'rajesh@crowdmove.in', password: 'test123' },
+      passenger: { email: 'priya@gmail.com', password: 'test123' },
+    }[role];
+    if (creds) {
+      await login(creds.email, creds.password);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -41,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, quickLoginAs, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
